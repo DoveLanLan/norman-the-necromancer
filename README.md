@@ -9,3 +9,5 @@ To get a development environment running:
 If you want to deploy a version of the game:
 - Run `npm build` to create a build
 - Now deploy the contents of the `dist` dir to a static site host (e.g. Netlify/GitHub pages).
+
+测试提交
