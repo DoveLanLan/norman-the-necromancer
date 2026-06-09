@@ -51,6 +51,11 @@ export function Die(object: GameObject, killer?: GameObject) {
 let castAnimationTimeout = 0;
 let castGroupId = 1;
 
+export function resetActions() {
+  clearTimeout(castAnimationTimeout);
+  castGroupId = 1;
+}
+
 export function Cast() {
   let { spell, player } = game;
 

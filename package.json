@@ -3,10 +3,13 @@
   "scripts": {
     "dev": "vite",
     "prebuild": "rm -rf dist dist.zip",
+    "prebuild:wechat": "rm -rf dist-wechat dist-wechat.zip",
     "build": "tsc && vite build && yarn archive",
+    "build:wechat": "tsc && vite build --mode wechat && yarn archive:wechat",
     "build:full": "tsc && vite build && yarn squash && yarn archive",
     "squash": "tinypng dist/",
-    "archive": "cd dist && zip -9 ../dist.zip -r * && cd ../ && ./scripts/measure.sh dist.zip",
+    "archive": "node scripts/archive.mjs dist dist.zip",
+    "archive:wechat": "node scripts/archive.mjs dist-wechat dist-wechat.zip 4194304",
     "typecheck": "tsc",
     "preview": "vite preview"
   },

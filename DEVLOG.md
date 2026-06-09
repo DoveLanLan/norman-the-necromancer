@@ -1,4 +1,12 @@
 # js13k
+
+## 2026-06-08 WeChat MVP route
+- First launch target is WeChat mini game.
+- Use the TypeScript/Web version as the launch base; keep the Unity project as a later remake/enhanced route.
+- Preserve the original gameplay loop and pixel style.
+- Scope: landscape, Chinese text, touch aiming/casting, resurrection button, shop tapping, mute, failure/restart screen, and simple local highest-progress storage.
+- Out of scope for MVP: login, leaderboard, ads, cloud save, third-party analytics, and Unity conversion.
+
 - Norman tries to defend himself from the local villagers
 - Make magic feel like magic
   - Glyphs, cooldowns, screenshake

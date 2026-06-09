@@ -9,8 +9,10 @@ lerna-debug.log*
 
 node_modules
 dist
+dist-wechat
 dist-ssr
 dist.zip
+dist-wechat.zip
 *.local
 
 # Editor directories and files
@@ -23,3 +25,4 @@ dist.zip
 *.njsproj
 *.sln
 *.sw?
+.aider*

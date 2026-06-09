@@ -1,4 +1,5 @@
 import { randomElement } from "./helpers";
+import { platform } from "./platform";
 
 function freq(step: number): number {
   // fn = f0 * a^n where:
@@ -9,7 +10,9 @@ function freq(step: number): number {
   return 440 * Math.pow(Math.pow(2, 1/12), step);
 }
 
-let ctx = new AudioContext();
+let ctx: AudioContext | undefined;
+let masterGain: GainNode | undefined;
+let muted = false;
 
 // Rest
 const __ = -24000;
@@ -69,15 +72,13 @@ const A_HARMONIC_MINOR = [
   A4, B4, C4, D4, F4, E4, Ab5, A5,
 ];
 
-let masterGain = new GainNode(ctx, { gain: 0 });
-masterGain.connect(ctx.destination);
-
 function createReverb(duration = 3, decay = 2) {
-  let convolver = new ConvolverNode(ctx, {});
+  let audio = ctx!;
+  let convolver = new ConvolverNode(audio, {});
 
-  let rate = ctx.sampleRate;
+  let rate = audio.sampleRate;
   let length = rate * duration;
-  let impulse = ctx.createBuffer(2, length, rate);
+  let impulse = audio.createBuffer(2, length, rate);
   let left = impulse.getChannelData(0)
   let right = impulse.getChannelData(1)
 
@@ -103,16 +104,17 @@ interface Synth {
 }
 
 function Synth(): Synth {
-  let volume = new GainNode(ctx, { gain: 1 });
-  volume.connect(masterGain);
-  let gain = new GainNode(ctx, { gain: 0 });
+  let audio = ctx!;
+  let volume = new GainNode(audio, { gain: 1 });
+  volume.connect(masterGain!);
+  let gain = new GainNode(audio, { gain: 0 });
   gain.connect(volume);
-  let filter = new BiquadFilterNode(ctx, {
+  let filter = new BiquadFilterNode(audio, {
     type: "lowpass",
     frequency: 500,
   });
   filter.connect(gain);
-  let osc = new OscillatorNode(ctx);
+  let osc = new OscillatorNode(audio);
   osc.connect(filter);
   return {
     gain,
@@ -128,17 +130,17 @@ function Synth(): Synth {
       this.enter();
     },
     enter() {
-      volume.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 1);
+      volume.gain.linearRampToValueAtTime(muted ? 0 : 0.5, audio.currentTime + 1);
     },
     exit() {
-      volume.gain.linearRampToValueAtTime(0, ctx.currentTime + 1);
+      volume.gain.linearRampToValueAtTime(0, audio.currentTime + 1);
     },
   };
 }
 
 function Organ(duration = 1, decay = 1): Synth {
   let synth = Synth();
-  synth.osc.setPeriodicWave(ctx.createPeriodicWave(ORGAN, ORGAN));
+  synth.osc.setPeriodicWave(ctx!.createPeriodicWave(ORGAN, ORGAN));
   let reverb = createReverb(duration, decay);
   reverb.connect(synth.gain);
   synth.filter.connect(reverb);
@@ -178,9 +180,12 @@ function Lead(): Synth {
 }
 
 function sequence(pattern: number[], retune: number = 0, synth: Synth) {
+  if (!ctx) return;
+
   let time = ctx.currentTime;
 
   function loop() {
+    if (!ctx) return;
     let looper = new OscillatorNode(ctx);
     looper.start(time);
     for (let i = 0; i < pattern.length; i += 2) {
@@ -230,18 +235,67 @@ function createBassline() {
   //return BASS_MELODY;
 }
 
+function NoopSynth(): Synth {
+  return {
+    volume: undefined as any,
+    gain: undefined as any,
+    osc: undefined as any,
+    filter: undefined as any,
+    play() {},
+    start() {},
+    enter() {},
+    exit() {},
+  };
+}
+
 export let synths = {
-  kick: Kick(),
-  ambientOrgan: Organ(6, 1),
-  bass: Lead(),
-  kingsOrgan1: Organ(3, 0.25),
-  kingsOrgan2: Organ(3, 1),
-  kingsBass: Organ(),
+  kick: NoopSynth(),
+  ambientOrgan: NoopSynth(),
+  bass: NoopSynth(),
+  kingsOrgan1: NoopSynth(),
+  kingsOrgan2: NoopSynth(),
+  kingsBass: NoopSynth(),
 };
+
+let normalLevelSynths: Synth[] = [];
+let bossLevelSynths: Synth[] = [];
+
+function setupAudio() {
+  if (ctx) return true;
+
+  try {
+    ctx = platform.createAudioContext();
+    if (!ctx) return false;
+
+    masterGain = new GainNode(ctx, { gain: 0 });
+    masterGain.connect(ctx.destination);
+
+    synths = {
+      kick: Kick(),
+      ambientOrgan: Organ(6, 1),
+      bass: Lead(),
+      kingsOrgan1: Organ(3, 0.25),
+      kingsOrgan2: Organ(3, 1),
+      kingsBass: Organ(),
+    };
+
+    normalLevelSynths = [synths.kick, synths.bass];
+    bossLevelSynths = [synths.kingsBass, synths.kingsOrgan1, synths.kingsOrgan2];
+  } catch {
+    ctx = undefined;
+    masterGain = undefined;
+    return false;
+  }
+
+  return true;
+}
 
 export function play() {
   if (init) return;
+  if (!setupAudio() || !ctx || !masterGain) return;
+
   init = true;
+  ctx.resume?.();
 
   let kingsBass = [
     A4, W / 2,
@@ -265,12 +319,26 @@ export function play() {
   }
 
   let t = ctx.currentTime;
-  masterGain.gain.linearRampToValueAtTime(0.5, t + 5);
+  masterGain.gain.linearRampToValueAtTime(muted ? 0 : 0.5, t + 5);
   useLevelSynths();
 }
 
-let normalLevelSynths: Synth[] = [synths.kick, synths.bass];
-let bossLevelSynths: Synth[] = [synths.kingsBass, synths.kingsOrgan1, synths.kingsOrgan2];
+export function isMuted() {
+  return muted;
+}
+
+export function setMuted(value: boolean) {
+  muted = value;
+
+  if (ctx && masterGain) {
+    masterGain.gain.setTargetAtTime(muted ? 0 : 0.5, ctx.currentTime, 0.05);
+  }
+}
+
+export function toggleMute() {
+  setMuted(!muted);
+  return muted;
+}
 
 export function useShopSynths() {
   synths.kick.exit();

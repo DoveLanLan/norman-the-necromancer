@@ -60,25 +60,25 @@ const DELAYS: Record<string | number, () => number> = {
   [MOB]: () => -randomInt(500),
 };
 
-const LEVELS = [
+const LEVEL_TEMPLATE = [
   // Level 1
-  4, VILLAGER, END_OF_WAVE,
+  1, THE_KING, END_OF_WAVE,
   4, VILLAGER, END_OF_WAVE,
   2, VILLAGER, 1, ARCHER, END_OF_WAVE,
-  2, VILLAGER, 1, ARCHER, 4, VILLAGER, END_OF_LEVEL,
+  2, VILLAGER, 1, ARCHER, 3, VILLAGER, END_OF_LEVEL,
 
   // Level 2
+  1, ARCHER, 4, VILLAGER, END_OF_WAVE,
   2, ARCHER, 4, VILLAGER, END_OF_WAVE,
-  3, ARCHER, 4, VILLAGER, END_OF_WAVE,
-  8, VILLAGER, 2, ARCHER, END_OF_WAVE,
+  6, VILLAGER, 2, ARCHER, END_OF_WAVE,
   1, CHAMPION, END_OF_LEVEL,
 
   // Level 3
   1, MONK, END_OF_WAVE,
-  4, BANDIT, END_OF_WAVE,
-  2, BANDIT, 1, MONK, END_OF_WAVE,
+  3, BANDIT, END_OF_WAVE,
+  1, BANDIT, 1, MONK, END_OF_WAVE,
   2, ARCHER, 1, MONK, END_OF_WAVE,
-  4, VILLAGER, 2, BANDIT, 2, ARCHER, 1, MONK, END_OF_LEVEL,
+  3, VILLAGER, 1, BANDIT, 2, ARCHER, 1, MONK, END_OF_LEVEL,
 
   // Level 4
   1, SHELL_KNIGHT, END_OF_WAVE,
@@ -127,13 +127,20 @@ const LEVELS = [
 
 let timer = 0;
 let cursor = 0;
+let levels = LEVEL_TEMPLATE.slice();
+
+export function resetLevels() {
+  timer = 0;
+  cursor = 0;
+  levels = LEVEL_TEMPLATE.slice();
+}
 
 export function isLevelFinished() {
-  return LEVELS[cursor] === END_OF_LEVEL && isCleared();
+  return levels[cursor] === END_OF_LEVEL && isCleared();
 }
 
 export function isComplete() {
-  return cursor >= LEVELS.length - 1;
+  return cursor >= levels.length - 1;
 }
 
 export let nextLevel = () => {
@@ -143,13 +150,13 @@ export let nextLevel = () => {
 };
 
 export function updateLevel(dt: number) {
-  let cmd = LEVELS[cursor];
+  let cmd = levels[cursor];
   if ((timer -= dt) > 0) {}
   else if (cmd === END_OF_WAVE) isCleared() && cursor++;
   else if (cmd === END_OF_LEVEL) {}
   else if (cmd) {
-    LEVELS[cursor]--; // Decrement quantity
-    let id = LEVELS[cursor + 1];
+    levels[cursor]--; // Decrement quantity
+    let id = levels[cursor + 1];
     let unit = LOOKUP[id]();
     game.spawn(unit);
     timer = unit.updateSpeed + (DELAYS[id]?.() || 0);

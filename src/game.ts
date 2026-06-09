@@ -276,7 +276,7 @@ export class Game {
   constructor(player: GameObject) {
     this.player = player;
     this.spawn(player);
-    window.game = this;
+    (globalThis as any).game = this;
   }
 
   spawn(object: GameObject, x = object.x, y = object.y) {
@@ -293,6 +293,12 @@ export class Game {
     }
 
     removeFromArray(this.objects, object);
+  }
+
+  lose() {
+    if (this.state !== LOSE) {
+      this.state = LOSE;
+    }
   }
 
   getStreakMultiplier() {

@@ -1,9 +1,12 @@
 import * as sprites from "./sprites.json";
-import { canvas, clear, ctx, drawNineSlice, drawSceneSprite, drawSprite, particleEmitters, Sprite, write } from "./engine";
+import { clear, ctx, drawNineSlice, drawSceneSprite, drawSprite, getLogicalSize, particleEmitters, Sprite, write } from "./engine";
 import { clamp, Point, randomInt } from "./helpers";
-import { INTRO, PLAYING, SHOPPING } from "./game";
+import { INTRO, LOSE, PLAYING, SHOPPING } from "./game";
 import { shop } from "./shop";
 import { Frozen } from "./behaviours";
+import { getSaveState } from "./storage";
+import { isMuted } from "./sounds";
+import { MUTE_BUTTON, RESTART_BUTTON, REVIVE_BUTTON, SHOP_LAYOUT, UiRect } from "./ui";
 
 const ICON_SOULS = "$";
 
@@ -16,10 +19,7 @@ export function screenshake(time: number) {
 let sceneOrigin = Point(0, 150);
 
 export function screenToSceneCoords(x: number, y: number): Point {
-  let r = canvas.getBoundingClientRect();
-  let sx = (x - r.x) * (canvas.width / r.width) | 0;
-  let sy = (y - r.y) * (canvas.height / r.height) | 0;
-  return { x: sx, y: sceneOrigin.y - sy };
+  return { x: x | 0, y: sceneOrigin.y - (y | 0) };
 }
 
 export function render(dt: number) {
@@ -43,24 +43,35 @@ export function render(dt: number) {
   if (game.state === SHOPPING) {
     drawShop();
   }
+
+  if (game.state === LOSE) {
+    drawLose();
+  }
+
+  drawMuteButton();
 }
 
 function drawShop() {
-  write("Rituals\n\n", 160, 20);
+  write("仪式商店", SHOP_LAYOUT.titleX, SHOP_LAYOUT.titleY);
   let selected = shop.items[shop.selectedIndex];
-  for (let item of shop.items) {
-    write(
-      `${item === selected ? ">" : " "}${
-        item.name
-      } $${item.cost}\n`,
-    );
+  for (let i = 0; i < shop.items.length; i++) {
+    let item = shop.items[i];
+    let cost = item.cost ? ` $${item.cost}` : "";
+    let marker = item === selected ? ">" : " ";
+    write(`${marker}${item.name}${cost}`, SHOP_LAYOUT.itemX, SHOP_LAYOUT.itemY + i * SHOP_LAYOUT.rowHeight);
   }
-  write("\n" + selected?.description + "\n");
+  write(selected?.description || "", SHOP_LAYOUT.descriptionX, SHOP_LAYOUT.descriptionY);
 }
 
 function drawHud() {
+  const { width, height } = getLogicalSize();
+
   if (game.dialogue.length) {
-    write(game.dialogue[0], 75, 50);
+    write(game.dialogue[0], 50, 50);
+    const save = getSaveState();
+    if (game.state === INTRO && save.highLevel > 1) {
+      write(`最高进度 ${save.completed ? "已通关" : save.highLevel + "/10"}`, 145, 170);
+    }
   }
 
   if (game.state === INTRO) return;
@@ -81,21 +92,42 @@ function drawHud() {
   if (souls) {
     let multiplier = game.getStreakMultiplier();
     let bonus = multiplier ? `(+${multiplier * 100 + "%"})` : "";
-    write(`${ICON_SOULS}${souls} ${bonus}`, canvas.width / 2 - 30, 0);
+    write(`${ICON_SOULS}${souls} ${bonus}`, width / 2 - 30, 0);
   }
 
-  write(`${game.level+1}-10`, canvas.width - 30, 2);
+  write(`${game.level+1}-10`, width - 58, 2);
 
   if (game.state === PLAYING) {
-    let x = 150;
-    let y = canvas.height - 12;
     let progress = clamp(game.ability.timer / game.ability.cooldown, 0, 1);
-    drawNineSlice(sprites.pink_frame, x, y, 52 * (1 - progress) | 0, 10);
-    write("Resurrect", x + 10, y + 2);
-    if (progress === 1) write(" (Space)");
-    else write(" (" + (((1 - progress) * game.ability.cooldown) / 1000 | 0) + "s)");
-    drawSprite(sprites.skull, x + 1, y + 1);
+    drawNineSlice(sprites.pink_frame, REVIVE_BUTTON.x, REVIVE_BUTTON.y, REVIVE_BUTTON.w * (1 - progress) | 0, REVIVE_BUTTON.h);
+    drawButton(REVIVE_BUTTON, progress === 1 ? "复活" : (((1 - progress) * game.ability.cooldown) / 1000 | 0) + "s");
+    drawSprite(sprites.skull, REVIVE_BUTTON.x + 3, REVIVE_BUTTON.y + 3);
   }
+}
+
+function drawButton(rect: UiRect, label: string) {
+  drawNineSlice(sprites.pink_frame, rect.x, rect.y, rect.w, rect.h);
+  write(label, rect.x + 22, rect.y + 4);
+}
+
+function drawMuteButton() {
+  drawNineSlice(sprites.pink_frame, MUTE_BUTTON.x, MUTE_BUTTON.y, MUTE_BUTTON.w, MUTE_BUTTON.h);
+  write(isMuted() ? "静" : "音", MUTE_BUTTON.x + 5, MUTE_BUTTON.y + 3);
+}
+
+function drawLose() {
+  const { width, height } = getLogicalSize();
+  const save = getSaveState();
+
+  ctx.save();
+  ctx.fillStyle = "rgba(24, 22, 34, 0.75)";
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+
+  drawNineSlice(sprites.pink_frame, 118, 72, 164, 76);
+  write("诺曼倒下了", 160, 86);
+  write(`最高进度 ${save.completed ? "已通关" : save.highLevel + "/10"}`, 148, 104);
+  drawButton(RESTART_BUTTON, "重新开始");
 }
 
 function drawOrbs(

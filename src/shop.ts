@@ -47,17 +47,17 @@ export function restockShop() {
   let exp = Math.pow(game.level + 1, 2);
   let items: (ShopItem | false)[] = [
     game.player.hp < game.player.maxHp &&
-      ShopItem(10 * game.level, "Heal", `Heal 1*`, () => Damage(game.player, -1)),
+      ShopItem(10 * game.level, "治疗", `回复 1 点生命`, () => Damage(game.player, -1)),
 
-    ShopItem(10 * exp, "Renew", `+1* max hp`, () => {
+    ShopItem(10 * exp, "续命", `生命上限 +1`, () => {
       game.player.maxHp++;
       game.player.hp++;
     }),
 
-    ShopItem(10 * exp, "Recharge", "+1\x7F max casts", () => game.spell.maxCasts++),
+    ShopItem(10 * exp, "充能", "法术槽 +1", () => game.spell.maxCasts++),
 
     ...createRitualItems(),
-    ShopItem(0, "Continue", "Begin the next level", () => exitShop()),
+    ShopItem(0, "继续", "进入下一关", () => exitShop()),
   ];
   shop.items = items.filter(item => item) as ShopItem[];
 }

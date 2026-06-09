@@ -28,7 +28,7 @@ export function Player() {
     Damage(player, unit.hp);
     Die(unit);
   };
-  player.onDeath = () => window.location = window.location;
+  player.onDeath = () => game.lose();
   return player;
 }
 
@@ -128,7 +128,7 @@ export function TheKing() {
   let unit = Villager();
   unit.sprite = sprites.the_king;
   unit.updateSpeed = 5000;
-  unit.hp = unit.maxHp = 100;
+  unit.hp = unit.maxHp = 3;
   unit.behaviours = [];
   unit.mass = 1000;
   unit.emitter = fx.royalty().extend({

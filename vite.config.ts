@@ -1,33 +1,35 @@
 import { defineConfig, Plugin } from "vite";
 
-export default defineConfig({
-  plugins: [singleFile()],
-  base: "./",
-  build: {
-    polyfillModulePreload: false,
-    reportCompressedSize: false,
-    assetsInlineLimit: 0,
-    minify: "terser",
-    terserOptions: {
-      compress: {
-        unsafe_arrows: true,
-        passes: 2,
+export default defineConfig(({ mode }) => {
+  const isWechat = mode === "wechat";
+
+  return {
+    plugins: isWechat ? [wechatFiles()] : [singleFile()],
+    base: "./",
+    build: {
+      outDir: isWechat ? "dist-wechat" : "dist",
+      polyfillModulePreload: false,
+      reportCompressedSize: false,
+      assetsInlineLimit: 0,
+      minify: "terser",
+      terserOptions: {
+        compress: {
+          unsafe_arrows: true,
+          passes: 2,
+        },
       },
-      mangle: {
-        properties: {
-          // Glyph width overrides in font.json need to be preserved.
-          keep_quoted: true
+      rollupOptions: {
+        input: isWechat ? "src/index.ts" : "index.html",
+        output: {
+          entryFileNames: isWechat ? "game.js" : `[name].js`,
+          chunkFileNames: `[name].js`,
+          assetFileNames: `[name].[ext]`,
+          format: isWechat ? "iife" : undefined,
+          name: isWechat ? "NormanTheNecromancer" : undefined,
         },
       },
     },
-    rollupOptions: {
-      output: {
-        entryFileNames: `[name].js`,
-        chunkFileNames: `[name].js`,
-        assetFileNames: `[name].[ext]`,
-      },
-    },
-  },
+  };
 });
 
 function singleFile(): Plugin {
@@ -46,6 +48,22 @@ function singleFile(): Plugin {
       }
 
       delete bundle[js.fileName];
+    }
+  };
+}
+
+function wechatFiles(): Plugin {
+  return {
+    name: "wechat-files",
+    generateBundle() {
+      this.emitFile({
+        type: "asset",
+        fileName: "game.json",
+        source: JSON.stringify({
+          deviceOrientation: "landscape",
+          showStatusBar: false,
+        }, null, 2),
+      });
     }
   };
 }

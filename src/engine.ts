@@ -1,6 +1,7 @@
 import spriteSrc from "./sprites.png";
 import { glyphWidth, glyphHeight, glyphWidthOverrides, lineHeight } from "./font.json";
 import { clamp, removeFromArray, vectorFromAngle } from "./helpers";
+import { platform } from "./platform";
 
 export type Sprite = number[];
 
@@ -20,15 +21,16 @@ for (let k in glyphWidthOverrides) {
   }
 }
 
-let spritesImage = new Image();
+let spritesImage = platform.createImage();
 spritesImage.src = spriteSrc;
 
-declare const c: HTMLCanvasElement;
-export let canvas = c;
-export let ctx = canvas.getContext("2d")!;
+export let canvas = platform.canvas;
+export let ctx = platform.ctx;
+let logicalWidth = 0;
+let logicalHeight = 0;
 
 export function clear() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  platform.clear(logicalWidth, logicalHeight);
 }
 
 export function drawSprite([sx, sy, sw, sh]: Sprite, x: number, y: number) {
@@ -48,7 +50,7 @@ export function drawSceneSprite(sprite: Sprite, x: number, y: number) {
 }
 
 export function drawSpriteSlice(sx: number, sy: number, sw: number, sh: number, dx: number, dy: number, dw: number, dh: number) {
-  ctx.drawImage(spritesImage, sx, sy, sw, sh, dx | 0, dy | 0, dw, dh);
+  ctx.drawImage(spritesImage as CanvasImageSource, sx, sy, sw, sh, dx | 0, dy | 0, dw, dh);
 }
 
 export function drawNineSlice(sprite: Sprite, x: number, y: number, w: number, h: number) {
@@ -112,37 +114,54 @@ export function write(text: string, x: number = textX, y: number = textY) {
       textX = x;
       textY += lineHeight;
     } else {
-      let code = char.charCodeAt(0) - 32;
-      let sx = (code % 32) * glyphWidth;
-      let sy = (code / 32 | 0) * glyphHeight;
+      let code = char.charCodeAt(0);
       let dx = textX;
       let dy = textY;
-      ctx.drawImage(spritesImage, sx, sy, glyphWidth, glyphHeight, dx, dy, glyphWidth, glyphHeight);
-      textX += metrics[char] ?? glyphWidth;
+
+      if (code >= 32 && code <= 127) {
+        let glyph = code - 32;
+        let sx = (glyph % 32) * glyphWidth;
+        let sy = (glyph / 32 | 0) * glyphHeight;
+        ctx.drawImage(spritesImage as CanvasImageSource, sx, sy, glyphWidth, glyphHeight, dx, dy, glyphWidth, glyphHeight);
+        textX += metrics[char] ?? glyphWidth;
+      } else {
+        ctx.save();
+        ctx.fillStyle = "#f5ead7";
+        ctx.font = "10px monospace";
+        ctx.textBaseline = "top";
+        ctx.fillText(char, dx, dy - 1);
+        ctx.restore();
+        textX += 10;
+      }
     }
   }
 }
 
 function resize() {
-  let { width: w, height: h } = canvas;
-  let scale = Math.min(innerWidth / w, innerHeight / h, 3);
-  canvas.style.width = canvas.width * scale + "px";
-  canvas.style.height = canvas.height * scale + "px";
-  ctx.imageSmoothingEnabled = false;
+  platform.resize(logicalWidth, logicalHeight);
 }
 
 export function init(width: number, height: number, update: (dt: number) => void) {
-  canvas.width = width;
-  canvas.height = height;
-  (onresize = resize)();
+  logicalWidth = width;
+  logicalHeight = height;
+  resize();
+  platform.onResize(resize);
 
   let t0 = 0;
   (function loop(t1 = 0) {
-    requestAnimationFrame(loop);
+    platform.requestFrame(loop);
     update(t1 - t0);
     t0 = t1;
   })();
-  onfocus = () => t0 = performance.now();
+  platform.onFocus(() => t0 = platform.now());
+}
+
+export function screenToCanvasCoords(x: number, y: number) {
+  return platform.screenToLogical(x, y);
+}
+
+export function getLogicalSize() {
+  return { width: logicalWidth, height: logicalHeight };
 }
 
 type Easing = (t: number) => number;
@@ -197,6 +216,11 @@ export function randomFromRange([base, spread]: Range): number {
 }
 
 export let particleEmitters: ParticleEmitter[] = [];
+
+export function resetEngineState() {
+  tweens = [];
+  particleEmitters = [];
+}
 
 export interface Particle {
   x: number;

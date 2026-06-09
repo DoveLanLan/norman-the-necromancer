@@ -20,15 +20,15 @@ const CURSE = 1 << 6;
 
 export let Streak: Ritual = {
   tags: NONE,
-  name: "Streak",
+  name: "连击",
   description: "",
   onCast: spell => spell.addBehaviour(new HitStreak(spell)),
 };
 
 export let Bouncing: Ritual = {
   tags: BOUNCING,
-  name: "Bouncing",
-  description: "Spells bounce",
+  name: "弹射",
+  description: "法术会反弹",
   onCast(spell) {
     spell.addBehaviour(new DespawnTimer(spell, 3000));
     spell.despawnOnBounce = false;
@@ -40,8 +40,8 @@ export let Doubleshot: Ritual = {
   tags: SPLITTING,
   exclusiveTags: SPLITTING,
   rarity: RARE,
-  name: "Doubleshot",
-  description: "Cast 2 spells",
+  name: "双发",
+  description: "一次发射 2 枚法术",
   onActive() {
     game.spell.shotsPerRound = 2;
   },
@@ -50,8 +50,8 @@ export let Doubleshot: Ritual = {
 export let Hunter: Ritual = {
   tags: HOMING,
   rarity: RARE,
-  name: "Hunter",
-  description: "Spells seek targets",
+  name: "追猎",
+  description: "法术会追踪敌人",
   onCast(projectile) {
     projectile.addBehaviour(new Seeking(projectile));
   },
@@ -59,8 +59,8 @@ export let Hunter: Ritual = {
 
 export let Weightless: Ritual = {
   tags: NONE,
-  name: "Weightless",
-  description: "Spells are not affected by gravity",
+  name: "失重",
+  description: "法术不受重力影响",
   onCast(spell) {
     spell.mass = 0;
     spell.friction = 0;
@@ -90,8 +90,8 @@ class KnockbackSpell extends Behaviour {
 
 export let Knockback: Ritual = {
   tags: NONE,
-  name: "Knockback",
-  description: "Spells knock backwards",
+  name: "击退",
+  description: "命中会击退敌人",
   onCast(spell) {
     spell.addBehaviour(new KnockbackSpell(spell));
   },
@@ -100,8 +100,8 @@ export let Knockback: Ritual = {
 export let Ceiling: Ritual = {
   tags: NONE,
   requiredTags: BOUNCING,
-  name: "Ceiling",
-  description: "Adds a ceiling",
+  name: "穹顶",
+  description: "增加可反弹天花板",
   onActive() {
     game.stage.ceiling = 48;
   },
@@ -134,8 +134,8 @@ export let Rain: Ritual = {
   tags: SPLITTING,
   exclusiveTags: SPLITTING,
   rarity: RARE,
-  name: "Rain",
-  description: "Spells split when they drop",
+  name: "魂雨",
+  description: "法术下落时分裂",
   recursive: false,
   onCast(spell) {
     spell.addBehaviour(new RainSpell(spell));
@@ -144,8 +144,8 @@ export let Rain: Ritual = {
 
 export let Drunkard: Ritual = {
   tags: NONE,
-  name: "Drunkard",
-  description: "2x damage, wobbly aim",
+  name: "醉术",
+  description: "伤害翻倍，但准星晃动",
   onCast(spell) {
     spell.vx += randomInt(100) - 50;
     spell.vy += randomInt(100) - 50;
@@ -155,8 +155,8 @@ export let Drunkard: Ritual = {
 
 export let Seer: Ritual = {
   tags: NONE,
-  name: "Seer",
-  description: "Spells pass through the dead",
+  name: "通灵",
+  description: "法术穿过亡灵",
   onCast(spell) {
     spell.collisionMask = LIVING;
   }
@@ -164,8 +164,8 @@ export let Seer: Ritual = {
 
 export let Tearstone: Ritual = {
   tags: NONE,
-  name: "Tearstone",
-  description: "2x damage when < half HP",
+  name: "泪石",
+  description: "半血以下伤害更高",
   onCast(spell) {
     if (game.player.hp < game.player.maxHp / 2) {
       spell.getBehaviour(Damaging)!.amount *= 3;
@@ -175,8 +175,8 @@ export let Tearstone: Ritual = {
 
 export let Impatience: Ritual = {
   tags: NONE,
-  name: "Impatience",
-  description: "Resurrection recharges 2x faster",
+  name: "急性子",
+  description: "复活冷却加快",
   onActive() {
     game.ability.cooldown /= 2;
   }
@@ -184,8 +184,8 @@ export let Impatience: Ritual = {
 
 export let Bleed: Ritual = {
   tags: CURSE,
-  name: "Bleed",
-  description: "Inflicts bleed on hits",
+  name: "放血",
+  description: "命中附加流血",
   onCast(spell: GameObject) {
     spell.sprite = sprites.p_red_skull;
     spell.emitter!.extend({
@@ -207,8 +207,8 @@ export let Bleed: Ritual = {
 
 export let Allegiance: Ritual = {
   tags: NONE,
-  name: "Allegiance",
-  description: "Summon your honour guard after resurrections",
+  name: "效忠",
+  description: "复活时召唤护卫",
   onResurrect() {
     for (let i = 0; i < 3; i++) {
       let unit = SkeletonLord();
@@ -220,8 +220,8 @@ export let Allegiance: Ritual = {
 
 export let Salvage: Ritual = {
   tags: NONE,
-  name: "Salvage",
-  description: "Corpses become souls at the end of levels",
+  name: "回收",
+  description: "关底尸骨变成魂",
   onLevelEnd() {
     let corpses = game.objects.filter(object => object.is(CORPSE));
 
@@ -242,8 +242,8 @@ export let Salvage: Ritual = {
 export let Studious: Ritual = {
   tags: NONE,
   rarity: RARE,
-  name: "Studious",
-  description: "Rituals are 50% cheaper",
+  name: "好学",
+  description: "仪式价格减半",
   onShopEnter() {
     for (let item of shop.items) {
       item.cost = item.cost / 2 | 0;
@@ -254,8 +254,8 @@ export let Studious: Ritual = {
 export let Electrodynamics: Ritual = {
   tags: NONE,
   rarity: RARE,
-  name: "Electrodynamics",
-  description: "Lightning strikes after hits",
+  name: "电魂",
+  description: "命中后召唤闪电",
   onCast(spell) {
     spell.addBehaviour(new LightningStrike(spell));
   },
@@ -263,8 +263,8 @@ export let Electrodynamics: Ritual = {
 
 export let Chilly: Ritual = {
   tags: NONE,
-  name: "Chilly",
-  description: "10% chance to freeze enemies",
+  name: "寒意",
+  description: "小概率冻结敌人",
   onCast(spell) {
     if (randomFloat() <= 0.1) {
       spell.emitter!.variants = [[sprites.p_ice_1, sprites.p_ice_2, sprites.p_ice_3]];
@@ -284,8 +284,8 @@ export let Chilly: Ritual = {
 
 export let Giants: Ritual = {
   tags: NONE,
-  name: "Giants",
-  description: "20% chance to resurrect giant skeletons",
+  name: "巨骨",
+  description: "有概率复活巨骷髅",
   onResurrection(object) {
     if (randomFloat() < 0.2) {
       game.despawn(object);
@@ -296,8 +296,8 @@ export let Giants: Ritual = {
 
 export let Avarice: Ritual = {
   tags: NONE,
-  name: "Avarice",
-  description: "+1 soul for each corpse you resurrect",
+  name: "贪婪",
+  description: "每具复活尸骨 +1 魂",
   onResurrection() {
     game.addSouls(1);
   },
@@ -305,8 +305,8 @@ export let Avarice: Ritual = {
 
 export let Hardened: Ritual = {
   tags: NONE,
-  name: "Hardened",
-  description: "Undead have +1 HP*",
+  name: "硬骨",
+  description: "亡灵生命 +1",
   onResurrection(object) {
     object.hp = object.maxHp += 1;
   }
