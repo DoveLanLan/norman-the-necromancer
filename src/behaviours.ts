@@ -9,6 +9,7 @@ import { distance, vectorToAngle, angleBetweenPoints, vectorFromAngle, clamp, ra
 import { LightningSpell } from "./objects";
 
 export class Attack extends Behaviour {
+  
   onCollision(target: GameObject): void {
     let dealDamage = this.object.hp;
     let takeDamage = target.hp;
