@@ -6,7 +6,7 @@ import { shop } from "./shop";
 import { Frozen } from "./behaviours";
 import { getSaveState } from "./storage";
 import { isMuted } from "./sounds";
-import { MUTE_BUTTON, RESTART_BUTTON, REVIVE_BUTTON, SHOP_LAYOUT, UiRect } from "./ui";
+import { LOSE_PANEL, MUTE_BUTTON, RESTART_BUTTON, REVIVE_BUTTON, SHOP_LAYOUT, UiRect } from "./ui";
 
 const ICON_SOULS = "$";
 
@@ -65,7 +65,7 @@ function drawShop() {
     };
     drawShopRow(row, item.name, item.cost ? `$${item.cost}` : "", item === selected);
   }
-  writeCentered(selected?.description || "", SHOP_LAYOUT.descriptionX, SHOP_LAYOUT.descriptionY, SHOP_LAYOUT.rowWidth);
+  writeCentered(selected?.description || "", 0, SHOP_LAYOUT.descriptionY, width);
 }
 
 function drawHud() {
@@ -100,7 +100,8 @@ function drawHud() {
     write(`${ICON_SOULS}${souls} ${bonus}`, width / 2 - 30, 0);
   }
 
-  write(`${game.level+1}-10`, width - 58, 2);
+  const levelText = `${game.level+1}-10`;
+  write(levelText, MUTE_BUTTON.x - measureText(levelText) - 8, 2);
 
   if (game.state === PLAYING) {
     let progress = clamp(game.ability.timer / game.ability.cooldown, 0, 1);
@@ -119,7 +120,7 @@ function writeCentered(text: string, x: number, y: number, width: number, height
 function drawButton(rect: UiRect, label: string, icon?: Sprite) {
   drawNineSlice(sprites.pink_frame, rect.x, rect.y, rect.w, rect.h);
 
-  const gap = icon ? 4 : 0;
+  const gap = icon ? 3 : 0;
   const iconWidth = icon ? icon[2] : 0;
   const contentWidth = iconWidth + gap + measureText(label);
   const contentX = rect.x + ((rect.w - contentWidth) / 2 | 0);
@@ -142,8 +143,8 @@ function drawShopRow(rect: UiRect, name: string, cost: string, selected: boolean
   }
 
   const y = rect.y + ((rect.h - textHeight(name)) / 2 | 0);
-  write(name, rect.x + 8, y);
-  write(cost, rect.x + rect.w - measureText(cost) - 8, y);
+  write(name, rect.x + 7, y);
+  write(cost, rect.x + rect.w - measureText(cost) - 7, y);
 }
 
 function drawMuteButton() {
@@ -159,9 +160,9 @@ function drawLose() {
   ctx.fillRect(0, 0, width, height);
   ctx.restore();
 
-  drawNineSlice(sprites.pink_frame, 118, 72, 164, 76);
-  writeCentered("诺曼倒下了", 118, 86, 164);
-  writeCentered(`最高进度 ${save.completed ? "已通关" : save.highLevel + "/10"}`, 118, 104, 164);
+  drawNineSlice(sprites.pink_frame, LOSE_PANEL.x, LOSE_PANEL.y, LOSE_PANEL.w, LOSE_PANEL.h);
+  writeCentered("诺曼倒下了", LOSE_PANEL.x, LOSE_PANEL.y + 12, LOSE_PANEL.w);
+  writeCentered(`最高进度 ${save.completed ? "已通关" : save.highLevel + "/10"}`, LOSE_PANEL.x, LOSE_PANEL.y + 29, LOSE_PANEL.w);
   drawButton(RESTART_BUTTON, "重新开始");
 }
 

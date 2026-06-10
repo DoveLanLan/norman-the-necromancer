@@ -13,7 +13,7 @@ import { BPM, play, setMuted, toggleMute } from "./sounds";
 import { March } from "./behaviours";
 import { platform, PointerInput } from "./platform";
 import { getSaveState, recordMuted, recordProgress } from "./storage";
-import { contains, MUTE_BUTTON, RESTART_BUTTON, REVIVE_BUTTON, shopIndexAt } from "./ui";
+import { contains, MUTE_HIT_AREA, RESTART_HIT_AREA, REVIVE_HIT_AREA, shopIndexAt } from "./ui";
 
 let player: ReturnType<typeof Player> = undefined!;
 let game: Game = undefined!;
@@ -58,13 +58,13 @@ function startPlaying() {
 }
 
 function handlePointerUp(point: PointerInput) {
-  if (contains(MUTE_BUTTON, point.x, point.y)) {
+  if (contains(MUTE_HIT_AREA, point.x, point.y)) {
     recordMuted(toggleMute());
     return;
   }
 
   if (game.state === LOSE) {
-    if (contains(RESTART_BUTTON, point.x, point.y)) {
+    if (contains(RESTART_HIT_AREA, point.x, point.y)) {
       createGame();
     }
     return;
@@ -81,7 +81,7 @@ function handlePointerUp(point: PointerInput) {
 
   aimAt(point);
 
-  if (game.state === PLAYING && contains(REVIVE_BUTTON, point.x, point.y)) {
+  if (game.state === PLAYING && contains(REVIVE_HIT_AREA, point.x, point.y)) {
     Resurrect();
     return;
   }

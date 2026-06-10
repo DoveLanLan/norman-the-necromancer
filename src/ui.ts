@@ -5,20 +5,24 @@ export interface UiRect {
   h: number;
 }
 
-export const REVIVE_BUTTON: UiRect = { x: 296, y: 176, w: 96, h: 20 };
-export const MUTE_BUTTON: UiRect = { x: 362, y: 5, w: 30, h: 18 };
-export const RESTART_BUTTON: UiRect = { x: 136, y: 118, w: 128, h: 20 };
+export const REVIVE_BUTTON: UiRect = { x: 334, y: 180, w: 58, h: 16 };
+export const REVIVE_HIT_AREA: UiRect = { x: 306, y: 166, w: 94, h: 34 };
+
+export const MUTE_BUTTON: UiRect = { x: 374, y: 5, w: 18, h: 14 };
+export const MUTE_HIT_AREA: UiRect = { x: 360, y: 0, w: 40, h: 28 };
+
+export const LOSE_PANEL: UiRect = { x: 136, y: 78, w: 128, h: 64 };
+export const RESTART_BUTTON: UiRect = { x: 166, y: 123, w: 68, h: 15 };
+export const RESTART_HIT_AREA: UiRect = { x: 148, y: 114, w: 104, h: 30 };
 
 export const SHOP_LAYOUT = {
-  titleX: 160,
   titleY: 18,
-  itemX: 72,
+  itemX: 124,
   itemY: 38,
-  rowHeight: 18,
-  rowWidth: 256,
-  rowHeightVisual: 16,
-  descriptionX: 72,
-  descriptionY: 154,
+  rowHeight: 16,
+  rowWidth: 152,
+  rowHeightVisual: 14,
+  descriptionY: 158,
 };
 
 export function contains(rect: UiRect, x: number, y: number) {
