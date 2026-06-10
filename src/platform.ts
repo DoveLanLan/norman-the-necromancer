@@ -65,6 +65,8 @@ function createBrowserPlatform(): Platform {
   canvas.style.imageRendering = "pixelated";
 
   const ctx = canvas.getContext("2d")!;
+  let logicalWidth = 400;
+  let logicalHeight = 200;
   let metrics: DisplayMetrics = {
     scale: 1,
     offsetX: 0,
@@ -75,11 +77,17 @@ function createBrowserPlatform(): Platform {
     safeInsets: emptyInsets,
   };
 
+  function useGameTransform() {
+    const dpr = metrics.pixelRatio;
+    ctx.setTransform(dpr * metrics.scale, 0, 0, dpr * metrics.scale, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+  }
+
   function screenToLogical(x: number, y: number): PointerInput {
     const rect = canvas!.getBoundingClientRect();
     return {
-      x: ((x - rect.x) * (canvas!.width / rect.width)) | 0,
-      y: ((y - rect.y) * (canvas!.height / rect.height)) | 0,
+      x: ((x - rect.x) / metrics.scale) | 0,
+      y: ((y - rect.y) / metrics.scale) | 0,
     };
   }
 
@@ -94,24 +102,30 @@ function createBrowserPlatform(): Platform {
     },
     clear(width, height) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, width, height);
+      ctx.clearRect(0, 0, canvas!.width, canvas!.height);
+      useGameTransform();
     },
     resize(width, height) {
-      canvas!.width = width;
-      canvas!.height = height;
+      logicalWidth = width;
+      logicalHeight = height;
       const scale = Math.min(innerWidth / width, innerHeight / height, 3);
-      canvas!.style.width = width * scale + "px";
-      canvas!.style.height = height * scale + "px";
-      ctx.imageSmoothingEnabled = false;
+      const pixelRatio = devicePixelRatio || 1;
+      const cssWidth = width * scale;
+      const cssHeight = height * scale;
+      canvas!.width = Math.max(1, Math.round(cssWidth * pixelRatio));
+      canvas!.height = Math.max(1, Math.round(cssHeight * pixelRatio));
+      canvas!.style.width = cssWidth + "px";
+      canvas!.style.height = cssHeight + "px";
       metrics = {
         scale,
         offsetX: 0,
         offsetY: 0,
         width: innerWidth,
         height: innerHeight,
-        pixelRatio: devicePixelRatio || 1,
+        pixelRatio,
         safeInsets: emptyInsets,
       };
+      useGameTransform();
       return metrics;
     },
     screenToLogical,

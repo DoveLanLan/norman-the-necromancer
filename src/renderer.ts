@@ -1,5 +1,5 @@
 import * as sprites from "./sprites.json";
-import { clear, ctx, drawNineSlice, drawSceneSprite, drawSprite, getLogicalSize, particleEmitters, Sprite, write } from "./engine";
+import { clear, ctx, drawNineSlice, drawSceneSprite, drawSprite, getLogicalSize, measureText, particleEmitters, Sprite, textHeight, write } from "./engine";
 import { clamp, Point, randomInt } from "./helpers";
 import { INTRO, LOSE, PLAYING, SHOPPING } from "./game";
 import { shop } from "./shop";
@@ -52,19 +52,24 @@ export function render(dt: number) {
 }
 
 function drawShop() {
-  write("仪式商店", SHOP_LAYOUT.titleX, SHOP_LAYOUT.titleY);
+  const { width } = getLogicalSize();
+  writeCentered("仪式商店", 0, SHOP_LAYOUT.titleY, width);
   let selected = shop.items[shop.selectedIndex];
   for (let i = 0; i < shop.items.length; i++) {
     let item = shop.items[i];
-    let cost = item.cost ? ` $${item.cost}` : "";
-    let marker = item === selected ? ">" : " ";
-    write(`${marker}${item.name}${cost}`, SHOP_LAYOUT.itemX, SHOP_LAYOUT.itemY + i * SHOP_LAYOUT.rowHeight);
+    let row = {
+      x: SHOP_LAYOUT.itemX,
+      y: SHOP_LAYOUT.itemY + i * SHOP_LAYOUT.rowHeight,
+      w: SHOP_LAYOUT.rowWidth,
+      h: SHOP_LAYOUT.rowHeightVisual,
+    };
+    drawShopRow(row, item.name, item.cost ? `$${item.cost}` : "", item === selected);
   }
-  write(selected?.description || "", SHOP_LAYOUT.descriptionX, SHOP_LAYOUT.descriptionY);
+  writeCentered(selected?.description || "", SHOP_LAYOUT.descriptionX, SHOP_LAYOUT.descriptionY, SHOP_LAYOUT.rowWidth);
 }
 
 function drawHud() {
-  const { width, height } = getLogicalSize();
+  const { width } = getLogicalSize();
 
   if (game.dialogue.length) {
     write(game.dialogue[0], 50, 50);
@@ -99,20 +104,50 @@ function drawHud() {
 
   if (game.state === PLAYING) {
     let progress = clamp(game.ability.timer / game.ability.cooldown, 0, 1);
-    drawNineSlice(sprites.pink_frame, REVIVE_BUTTON.x, REVIVE_BUTTON.y, REVIVE_BUTTON.w * (1 - progress) | 0, REVIVE_BUTTON.h);
-    drawButton(REVIVE_BUTTON, progress === 1 ? "复活" : (((1 - progress) * game.ability.cooldown) / 1000 | 0) + "s");
-    drawSprite(sprites.skull, REVIVE_BUTTON.x + 3, REVIVE_BUTTON.y + 3);
+    let cooldownWidth = Math.max(0, REVIVE_BUTTON.w * (1 - progress) | 0);
+    if (cooldownWidth > 3) {
+      drawNineSlice(sprites.pink_frame, REVIVE_BUTTON.x, REVIVE_BUTTON.y, cooldownWidth, REVIVE_BUTTON.h);
+    }
+    drawButton(REVIVE_BUTTON, progress === 1 ? "复活" : (((1 - progress) * game.ability.cooldown) / 1000 | 0) + "s", sprites.skull);
   }
 }
 
-function drawButton(rect: UiRect, label: string) {
+function writeCentered(text: string, x: number, y: number, width: number, height = textHeight(text)) {
+  write(text, x + ((width - measureText(text)) / 2 | 0), y + ((height - textHeight(text)) / 2 | 0));
+}
+
+function drawButton(rect: UiRect, label: string, icon?: Sprite) {
   drawNineSlice(sprites.pink_frame, rect.x, rect.y, rect.w, rect.h);
-  write(label, rect.x + 22, rect.y + 4);
+
+  const gap = icon ? 4 : 0;
+  const iconWidth = icon ? icon[2] : 0;
+  const contentWidth = iconWidth + gap + measureText(label);
+  const contentX = rect.x + ((rect.w - contentWidth) / 2 | 0);
+
+  if (icon) {
+    drawSprite(icon, contentX, rect.y + ((rect.h - icon[3]) / 2 | 0));
+  }
+
+  write(label, contentX + iconWidth + gap, rect.y + ((rect.h - textHeight(label)) / 2 | 0));
+}
+
+function drawShopRow(rect: UiRect, name: string, cost: string, selected: boolean) {
+  if (selected) {
+    drawNineSlice(sprites.pink_frame, rect.x, rect.y, rect.w, rect.h);
+  }
+
+  if (!cost) {
+    writeCentered(name, rect.x, rect.y, rect.w, rect.h);
+    return;
+  }
+
+  const y = rect.y + ((rect.h - textHeight(name)) / 2 | 0);
+  write(name, rect.x + 8, y);
+  write(cost, rect.x + rect.w - measureText(cost) - 8, y);
 }
 
 function drawMuteButton() {
-  drawNineSlice(sprites.pink_frame, MUTE_BUTTON.x, MUTE_BUTTON.y, MUTE_BUTTON.w, MUTE_BUTTON.h);
-  write(isMuted() ? "静" : "音", MUTE_BUTTON.x + 5, MUTE_BUTTON.y + 3);
+  drawButton(MUTE_BUTTON, isMuted() ? "静" : "音");
 }
 
 function drawLose() {
@@ -125,8 +160,8 @@ function drawLose() {
   ctx.restore();
 
   drawNineSlice(sprites.pink_frame, 118, 72, 164, 76);
-  write("诺曼倒下了", 160, 86);
-  write(`最高进度 ${save.completed ? "已通关" : save.highLevel + "/10"}`, 148, 104);
+  writeCentered("诺曼倒下了", 118, 86, 164);
+  writeCentered(`最高进度 ${save.completed ? "已通关" : save.highLevel + "/10"}`, 118, 104, 164);
   drawButton(RESTART_BUTTON, "重新开始");
 }
 

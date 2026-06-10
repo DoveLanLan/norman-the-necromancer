@@ -127,7 +127,7 @@ export function write(text: string, x: number = textX, y: number = textY) {
       } else {
         ctx.save();
         ctx.fillStyle = "#f5ead7";
-        ctx.font = "10px monospace";
+        ctx.font = "600 10px system-ui, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif";
         ctx.textBaseline = "top";
         ctx.fillText(char, dx, dy - 1);
         ctx.restore();
@@ -135,6 +135,32 @@ export function write(text: string, x: number = textX, y: number = textY) {
       }
     }
   }
+}
+
+export function measureText(text: string) {
+  let lineWidth = 0;
+  let maxWidth = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    let char = text[i];
+    if (char === "\n") {
+      maxWidth = Math.max(maxWidth, lineWidth);
+      lineWidth = 0;
+    } else {
+      lineWidth += char.charCodeAt(0) >= 32 && char.charCodeAt(0) <= 127
+        ? metrics[char] ?? glyphWidth
+        : 10;
+    }
+  }
+
+  return Math.max(maxWidth, lineWidth);
+}
+
+export function textHeight(text: string) {
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) > 127) return 10;
+  }
+  return glyphHeight;
 }
 
 function resize() {
