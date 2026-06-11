@@ -1,8 +1,9 @@
 import * as sprites from "./sprites.json";
 import * as fx from "./fx";
 import { Damage, Death, GameObject } from "./game";
-import { clamp, randomFloat, randomInt, vectorFromAngle } from "./helpers";
+import { clamp, distance, randomFloat, randomInt } from "./helpers";
 import { Corpse, Spell, Skeleton } from "./objects";
+import { applySpellKinematics, createSpellKinematics, getSpellShotAngle } from "./projectile";
 import { CORPSE, MOBILE } from "./tags";
 
 export function Damage(
@@ -66,19 +67,19 @@ export function Cast() {
   clearTimeout(castAnimationTimeout);
   castAnimationTimeout = setTimeout(() => player.sprite = sprites.norman_arms_down, 500);
 
-  let power = spell.basePower;
-  let targetAngle = spell.targetAngle - (spell.shotsPerRound * spell.shotOffsetAngle / 2);
   let groupId = castGroupId++;
 
   for (let j = 0; j < spell.shotsPerRound; j++) {
     let projectile = Spell();
-    let angle = targetAngle + j * spell.shotOffsetAngle;
-    let [vx, vy] = vectorFromAngle(angle);
-    let { x, y } = game.getCastingPoint();
-    projectile.x = x - projectile.sprite[2] / 2;
-    projectile.y = y - projectile.sprite[3] / 2;
-    projectile.vx = vx * power;
-    projectile.vy = vy * power;
+    applySpellKinematics(
+      projectile,
+      createSpellKinematics(
+        spell,
+        game.getCastingPoint(),
+        getSpellShotAngle(spell, j),
+        projectile.sprite,
+      ),
+    );
     projectile.groupId = groupId;
     game.spawn(projectile);
     game.onCast(projectile);
@@ -90,13 +91,21 @@ export function Resurrect() {
     return;
   }
 
+  let playerCenter = game.player.center();
+  let corpses = game.objects
+    .filter(object => object.is(CORPSE))
+    .sort((a, b) => distance(a.center(), playerCenter) - distance(b.center(), playerCenter))
+    .slice(0, game.ability.resurrectionCount);
+
+  if (!corpses.length) {
+    return;
+  }
+
   game.ability.timer = 0;
 
   for (let ritual of game.rituals) {
     ritual.onResurrect?.();
   }
-
-  let corpses = game.objects.filter(object => object.is(CORPSE));
 
   for (let corpse of corpses) {
     game.despawn(corpse);

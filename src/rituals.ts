@@ -29,6 +29,10 @@ export let Bouncing: Ritual = {
   tags: BOUNCING,
   name: "弹射",
   description: "法术会反弹",
+  onActive() {
+    game.spell.projectileBounce = 0.5;
+    game.spell.projectileDespawnOnBounce = false;
+  },
   onCast(spell) {
     spell.addBehaviour(new DespawnTimer(spell, 3000));
     spell.despawnOnBounce = false;
@@ -61,6 +65,11 @@ export let Weightless: Ritual = {
   tags: NONE,
   name: "失重",
   description: "法术不受重力影响",
+  onActive() {
+    game.spell.projectileMass = 0;
+    game.spell.projectileFriction = 0;
+    game.spell.projectileBounce = 1;
+  },
   onCast(spell) {
     spell.mass = 0;
     spell.friction = 0;
@@ -179,6 +188,15 @@ export let Impatience: Ritual = {
   description: "复活冷却加快",
   onActive() {
     game.ability.cooldown /= 2;
+  }
+};
+
+export let GatherBones: Ritual = {
+  tags: NONE,
+  name: "聚骨",
+  description: "复活数量 +1",
+  onActive() {
+    game.ability.resurrectionCount++;
   }
 };
 

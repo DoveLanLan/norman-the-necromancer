@@ -38,6 +38,9 @@ export function enterShop() {
 }
 
 export function exitShop() {
+  game.spell.casts = game.spell.maxCasts;
+  game.spell.castRechargeTimer = 0;
+  game.ability.timer = game.ability.cooldown;
   game.state = PLAYING;
   nextLevel();
   useLevelSynths();

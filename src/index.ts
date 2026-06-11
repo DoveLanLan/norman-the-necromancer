@@ -6,7 +6,7 @@ import { Cast, Resurrect, resetActions } from "./actions";
 import { angleBetweenPoints } from "./helpers";
 import { Player } from "./objects";
 import { isComplete, isLevelFinished, resetLevels, updateLevel } from "./levels";
-import { Studious, Bleed, Bouncing, Tearstone, Ceiling, Drunkard, Salvage, Chilly, Hunter, Knockback, Rain, Seer, Doubleshot, Streak, Weightless, Electrodynamics, Impatience, Giants, Avarice, Hardened, Allegiance } from "./rituals";
+import { Studious, Bleed, Bouncing, Tearstone, Ceiling, Drunkard, Salvage, Chilly, Hunter, Knockback, Rain, Seer, Doubleshot, Streak, Weightless, Electrodynamics, Impatience, Giants, Avarice, Hardened, Allegiance, GatherBones } from "./rituals";
 import { buy, enterShop, selectShopIndex, shop } from "./shop";
 import { dust } from "./fx";
 import { BPM, play, setMuted, toggleMute } from "./sounds";
@@ -34,16 +34,17 @@ const INTRO_DIALOGUE = [
   "但像样的死灵法师...",
   "总能把自己再召回来。",
   "拖动瞄准，点击施法。",
-  "右下角按钮可以复活尸骨。",
+  "右下角骷髅图标可以复活最近的尸骨。",
 ];
 
 const OUTRO_DIALOGUE = [
-  "",
   "一切终于安静了。",
   "诺曼可以继续研究死灵术。",
   "但他知道，村民迟早还会回来。",
   "完",
 ];
+
+const RESTART_PROMPT = "点击重新开始";
 
 function aimAt({ x, y }: PointerInput) {
   let p1 = player.center();
@@ -70,6 +71,15 @@ function handlePointerUp(point: PointerInput) {
     return;
   }
 
+  if (game.state === WIN) {
+    if (game.dialogue[0] === RESTART_PROMPT) {
+      createGame();
+    } else {
+      advanceDialogue();
+    }
+    return;
+  }
+
   if (game.state === SHOPPING) {
     let index = shopIndexAt(point.x, point.y, shop.items.length);
     if (index >= 0) {
@@ -88,6 +98,7 @@ function handlePointerUp(point: PointerInput) {
 
   if (game.state === INTRO) {
     startPlaying();
+    return;
   }
 
   Cast();
@@ -103,6 +114,12 @@ function handleKey(key: number) {
     if (key === ENTER) buy();
   } else if (game.state === LOSE && key === ENTER) {
     createGame();
+  } else if (game.state === WIN && key === ENTER) {
+    if (game.dialogue[0] === RESTART_PROMPT) {
+      createGame();
+    } else {
+      advanceDialogue();
+    }
   }
 }
 
@@ -114,9 +131,6 @@ function update(dt: number) {
   if (game.state === PLAYING) {
     updateLevel(dt);
     recordProgress(game.level + 1);
-  }
-
-  if (game.state !== INTRO && game.state !== LOSE) {
     game.update(dt);
   }
 
@@ -144,18 +158,24 @@ function update(dt: number) {
 function onWin() {
   game.state = WIN;
   recordProgress(10, true);
-  game.dialogue = OUTRO_DIALOGUE;
+  game.dialogue = OUTRO_DIALOGUE.slice();
+}
+
+function advanceDialogue() {
+  game.dialogue.shift();
+  dialogueTimer = 0;
+
+  // If the player watched the whole dialogue, remind them what to do next.
+  if (game.state === INTRO && game.dialogue.length === 0) {
+    game.dialogue.push("拖动瞄准，点击开始");
+  } else if (game.state === WIN && game.dialogue.length === 0) {
+    game.dialogue.push(RESTART_PROMPT);
+  }
 }
 
 function updateDialogue(dt: number) {
-  if ((dialogueTimer += dt) > 4000) {
-    game.dialogue.shift()
-    dialogueTimer = 0;
-
-    // If the player watched the whole dialogue, remind them to click to start
-    if (game.state === INTRO && game.dialogue.length === 0) {
-      game.dialogue.push("拖动瞄准，点击开始");
-    }
+  if (game.dialogue.length && (dialogueTimer += dt) > 4000) {
+    advanceDialogue();
   }
 }
 
@@ -172,6 +192,7 @@ function createRitualPool() {
     Seer,
     Tearstone,
     Impatience,
+    GatherBones,
     Bleed,
     Salvage,
     Studious,

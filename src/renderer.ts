@@ -1,14 +1,23 @@
 import * as sprites from "./sprites.json";
 import { clear, ctx, drawNineSlice, drawSceneSprite, drawSprite, getLogicalSize, measureText, particleEmitters, Sprite, textHeight, write } from "./engine";
 import { clamp, Point, randomInt } from "./helpers";
-import { INTRO, LOSE, PLAYING, SHOPPING } from "./game";
+import { INTRO, LOSE, PLAYING, SHOPPING, WIN } from "./game";
 import { shop } from "./shop";
 import { Frozen } from "./behaviours";
 import { getSaveState } from "./storage";
 import { isMuted } from "./sounds";
+import { createSpellKinematics, getSpellShotAngle, stepProjectileKinematics } from "./projectile";
+import { CORPSE } from "./tags";
 import { LOSE_PANEL, MUTE_BUTTON, RESTART_BUTTON, REVIVE_BUTTON, SHOP_LAYOUT, UiRect } from "./ui";
 
 const ICON_SOULS = "$";
+const UI_LIGHT = "#f5ead7";
+const UI_DARK = "rgba(24, 22, 34, 0.72)";
+const UI_MUTED = "#ff6b7a";
+const TRAJECTORY_COLOR = "#8fdc73";
+const TRAJECTORY_DOTS = 24;
+const TRAJECTORY_STEP_MS = 1000 / 60;
+const TRAJECTORY_STEPS_PER_DOT = 4;
 
 let screenShakeTimer = 0;
 
@@ -35,7 +44,10 @@ export function render(dt: number) {
   drawBackground();
   drawParticles();
   drawObjects();
-  if (game.state === PLAYING) drawReticle();
+  if (game.state === PLAYING) {
+    drawTrajectory();
+    drawReticle();
+  }
   ctx.restore();
 
   drawHud();
@@ -46,6 +58,10 @@ export function render(dt: number) {
 
   if (game.state === LOSE) {
     drawLose();
+  }
+
+  if (game.state === WIN) {
+    drawWin();
   }
 
   drawMuteButton();
@@ -65,7 +81,11 @@ function drawShop() {
     };
     drawShopRow(row, item.name, item.cost ? `$${item.cost}` : "", item === selected);
   }
-  writeCentered(selected?.description || "", 0, SHOP_LAYOUT.descriptionY, width);
+  let description = selected?.description || "";
+  if (selected && selected.cost > game.souls) {
+    description = `${description} 魂不足`;
+  }
+  writeCentered(description, 0, SHOP_LAYOUT.descriptionY, width);
 }
 
 function drawHud() {
@@ -101,20 +121,83 @@ function drawHud() {
   }
 
   const levelText = `${game.level+1}-10`;
-  write(levelText, MUTE_BUTTON.x - measureText(levelText) - 8, 2);
+  write(levelText, MUTE_BUTTON.x - measureText(levelText) - 8, MUTE_BUTTON.y + 6);
 
   if (game.state === PLAYING) {
     let progress = clamp(game.ability.timer / game.ability.cooldown, 0, 1);
-    let cooldownWidth = Math.max(0, REVIVE_BUTTON.w * (1 - progress) | 0);
-    if (cooldownWidth > 3) {
-      drawNineSlice(sprites.pink_frame, REVIVE_BUTTON.x, REVIVE_BUTTON.y, cooldownWidth, REVIVE_BUTTON.h);
-    }
-    drawButton(REVIVE_BUTTON, progress === 1 ? "复活" : (((1 - progress) * game.ability.cooldown) / 1000 | 0) + "s", sprites.skull);
+    let hasCorpses = game.objects.some(object => object.is(CORPSE));
+    drawReviveButton(progress, hasCorpses);
   }
 }
 
 function writeCentered(text: string, x: number, y: number, width: number, height = textHeight(text)) {
   write(text, x + ((width - measureText(text)) / 2 | 0), y + ((height - textHeight(text)) / 2 | 0));
+}
+
+function drawIconFrame(rect: UiRect) {
+  drawNineSlice(sprites.pink_frame, rect.x, rect.y, rect.w, rect.h);
+}
+
+function drawSpriteIcon(rect: UiRect, icon: Sprite) {
+  drawSprite(
+    icon,
+    rect.x + ((rect.w - icon[2]) / 2 | 0),
+    rect.y + ((rect.h - icon[3]) / 2 | 0),
+  );
+}
+
+function drawReviveButton(progress: number, enabled: boolean) {
+  drawIconFrame(REVIVE_BUTTON);
+  drawSpriteIcon(REVIVE_BUTTON, sprites.skull);
+
+  let remaining = 1 - progress;
+  if (remaining > 0 || !enabled) {
+    let inset = 3;
+    let h = enabled
+      ? (REVIVE_BUTTON.h - inset * 2) * remaining | 0
+      : REVIVE_BUTTON.h - inset * 2;
+    ctx.save();
+    ctx.fillStyle = UI_DARK;
+    ctx.fillRect(
+      REVIVE_BUTTON.x + inset,
+      REVIVE_BUTTON.y + inset,
+      REVIVE_BUTTON.w - inset * 2,
+      h,
+    );
+    ctx.restore();
+    drawIconFrame(REVIVE_BUTTON);
+  }
+}
+
+function drawSpeakerIcon(rect: UiRect, muted: boolean) {
+  let x = rect.x + ((rect.w - 13) / 2 | 0);
+  let y = rect.y + ((rect.h - 10) / 2 | 0);
+
+  ctx.save();
+  ctx.fillStyle = UI_LIGHT;
+  ctx.fillRect(x, y + 4, 3, 4);
+  ctx.fillRect(x + 3, y + 3, 2, 6);
+  ctx.fillRect(x + 5, y + 2, 1, 8);
+
+  if (muted) {
+    ctx.strokeStyle = UI_MUTED;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + 8, y + 2);
+    ctx.lineTo(x + 13, y + 8);
+    ctx.moveTo(x + 13, y + 2);
+    ctx.lineTo(x + 8, y + 8);
+    ctx.stroke();
+  } else {
+    ctx.fillRect(x + 8, y + 3, 1, 1);
+    ctx.fillRect(x + 9, y + 4, 1, 2);
+    ctx.fillRect(x + 8, y + 7, 1, 1);
+    ctx.fillRect(x + 11, y + 2, 1, 1);
+    ctx.fillRect(x + 12, y + 3, 1, 6);
+    ctx.fillRect(x + 11, y + 9, 1, 1);
+  }
+
+  ctx.restore();
 }
 
 function drawButton(rect: UiRect, label: string, icon?: Sprite) {
@@ -148,7 +231,8 @@ function drawShopRow(rect: UiRect, name: string, cost: string, selected: boolean
 }
 
 function drawMuteButton() {
-  drawButton(MUTE_BUTTON, isMuted() ? "静" : "音");
+  drawIconFrame(MUTE_BUTTON);
+  drawSpeakerIcon(MUTE_BUTTON, isMuted());
 }
 
 function drawLose() {
@@ -163,6 +247,20 @@ function drawLose() {
   drawNineSlice(sprites.pink_frame, LOSE_PANEL.x, LOSE_PANEL.y, LOSE_PANEL.w, LOSE_PANEL.h);
   writeCentered("诺曼倒下了", LOSE_PANEL.x, LOSE_PANEL.y + 12, LOSE_PANEL.w);
   writeCentered(`最高进度 ${save.completed ? "已通关" : save.highLevel + "/10"}`, LOSE_PANEL.x, LOSE_PANEL.y + 29, LOSE_PANEL.w);
+  drawButton(RESTART_BUTTON, "重新开始");
+}
+
+function drawWin() {
+  if (game.dialogue.length && game.dialogue[0] !== "点击重新开始") return;
+
+  const { width, height } = getLogicalSize();
+  ctx.save();
+  ctx.fillStyle = "rgba(24, 22, 34, 0.65)";
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+
+  drawNineSlice(sprites.pink_frame, LOSE_PANEL.x, LOSE_PANEL.y, LOSE_PANEL.w, LOSE_PANEL.h);
+  writeCentered("诺曼胜利了", LOSE_PANEL.x, LOSE_PANEL.y + 16, LOSE_PANEL.w);
   drawButton(RESTART_BUTTON, "重新开始");
 }
 
@@ -206,6 +304,43 @@ function drawObjects() {
       }
     }
   }
+}
+
+function drawTrajectory() {
+  for (let i = 0; i < game.spell.shotsPerRound; i++) {
+    drawProjectileTrajectory(getSpellShotAngle(game.spell, i));
+  }
+}
+
+function drawProjectileTrajectory(angle: number) {
+  let projectile = createSpellKinematics(
+    game.spell,
+    game.getCastingPoint(),
+    angle,
+  );
+
+  ctx.save();
+  for (let i = 1; i <= TRAJECTORY_DOTS; i++) {
+    let alive = true;
+    for (let j = 0; j < TRAJECTORY_STEPS_PER_DOT; j++) {
+      alive = stepProjectileKinematics(projectile, game.stage, TRAJECTORY_STEP_MS);
+      if (!alive) break;
+    }
+
+    let x = projectile.x + projectile.sprite[2] / 2;
+    let y = projectile.y + projectile.sprite[3] / 2;
+    if (x < 0 || x > game.stage.width) {
+      break;
+    }
+
+    let size = i % 3 === 0 ? 2 : 1;
+    ctx.globalAlpha = clamp(0.72 - i * 0.018, 0.18, 0.72);
+    ctx.fillStyle = TRAJECTORY_COLOR;
+    ctx.fillRect((x - size / 2) | 0, (-y - size / 2) | 0, size, size);
+
+    if (!alive) break;
+  }
+  ctx.restore();
 }
 
 function drawBackground() {

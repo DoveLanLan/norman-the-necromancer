@@ -190,6 +190,10 @@ export interface Spell {
   targetAngle: number;
   targetRadius: number;
   basePower: number;
+  projectileMass: number;
+  projectileBounce: number;
+  projectileFriction: number;
+  projectileDespawnOnBounce: boolean;
   shotsPerRound: number;
   shotOffsetAngle: number;
   maxCasts: number;
@@ -201,6 +205,7 @@ export interface Spell {
 export interface Ability {
   cooldown: number;
   timer: number;
+  resurrectionCount: number;
 }
 
 export interface Ritual {
@@ -260,6 +265,10 @@ export class Game {
     targetAngle: 0,
     targetRadius: 15,
     basePower: 180,
+    projectileMass: 100,
+    projectileBounce: 0,
+    projectileFriction: 0.1,
+    projectileDespawnOnBounce: true,
     shotsPerRound: 1,
     shotOffsetAngle: 0.1,
     maxCasts: 3,
@@ -271,6 +280,7 @@ export class Game {
   ability: Ability = {
     cooldown: 10_000,
     timer: 10_000,
+    resurrectionCount: 1,
   };
 
   constructor(player: GameObject) {

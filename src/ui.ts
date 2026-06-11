@@ -5,11 +5,11 @@ export interface UiRect {
   h: number;
 }
 
-export const REVIVE_BUTTON: UiRect = { x: 334, y: 180, w: 58, h: 16 };
-export const REVIVE_HIT_AREA: UiRect = { x: 306, y: 166, w: 94, h: 34 };
+export const REVIVE_BUTTON: UiRect = { x: 362, y: 164, w: 30, h: 30 };
+export const REVIVE_HIT_AREA: UiRect = { x: 332, y: 150, w: 68, h: 50 };
 
-export const MUTE_BUTTON: UiRect = { x: 374, y: 5, w: 18, h: 14 };
-export const MUTE_HIT_AREA: UiRect = { x: 360, y: 0, w: 40, h: 28 };
+export const MUTE_BUTTON: UiRect = { x: 372, y: 4, w: 20, h: 20 };
+export const MUTE_HIT_AREA: UiRect = { x: 358, y: 0, w: 42, h: 34 };
 
 export const LOSE_PANEL: UiRect = { x: 136, y: 78, w: 128, h: 64 };
 export const RESTART_BUTTON: UiRect = { x: 166, y: 123, w: 68, h: 15 };
