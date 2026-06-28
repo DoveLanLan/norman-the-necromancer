@@ -1,7 +1,7 @@
 import * as sprites from "./sprites.json";
 import { clear, ctx, drawNineSlice, drawSceneSprite, drawSprite, getLogicalSize, measureText, particleEmitters, Sprite, textHeight, write } from "./engine";
 import { clamp, Point, randomInt } from "./helpers";
-import { INTRO, LOSE, PLAYING, SHOPPING, WIN } from "./game";
+import { GameObject, INTRO, LOSE, PLAYING, SHOPPING, WIN } from "./game";
 import { shop } from "./shop";
 import { Frozen } from "./behaviours";
 import { getSaveState } from "./storage";
@@ -120,14 +120,22 @@ function drawHud() {
     write(`${ICON_SOULS}${souls} ${bonus}`, width / 2 - 30, 0);
   }
 
+  if (game.notice && game.noticeTimer > 0) {
+    writeCentered(game.notice, 0, 27, width);
+  }
+
   const levelText = `${game.level+1}-10`;
   write(levelText, MUTE_BUTTON.x - measureText(levelText) - 8, MUTE_BUTTON.y + 6);
 
   if (game.state === PLAYING) {
     let progress = clamp(game.ability.timer / game.ability.cooldown, 0, 1);
-    let hasCorpses = game.objects.some(object => object.is(CORPSE));
-    drawReviveButton(progress, hasCorpses);
+    let corpses = getCorpses();
+    drawReviveButton(progress, corpses);
   }
+}
+
+function getCorpses() {
+  return game.objects.filter(object => object.is(CORPSE));
 }
 
 function writeCentered(text: string, x: number, y: number, width: number, height = textHeight(text)) {
@@ -146,14 +154,28 @@ function drawSpriteIcon(rect: UiRect, icon: Sprite) {
   );
 }
 
-function drawReviveButton(progress: number, enabled: boolean) {
+function drawReviveButton(progress: number, corpses: GameObject[]) {
+  let enabled = progress >= 1 && corpses.length > 0;
+  let pulse = enabled ? 1 + Math.sin(Date.now() / 180) : 0;
+  ctx.save();
+  if (pulse) {
+    ctx.strokeStyle = TRAJECTORY_COLOR;
+    ctx.globalAlpha = 0.25 + pulse * 0.1;
+    ctx.strokeRect(REVIVE_BUTTON.x - 2, REVIVE_BUTTON.y - 2, REVIVE_BUTTON.w + 4, REVIVE_BUTTON.h + 4);
+  }
+  ctx.restore();
+
   drawIconFrame(REVIVE_BUTTON);
   drawSpriteIcon(REVIVE_BUTTON, sprites.skull);
+
+  if (corpses.length) {
+    write(`x${corpses.length}`, REVIVE_BUTTON.x - 8, REVIVE_BUTTON.y + 2);
+  }
 
   let remaining = 1 - progress;
   if (remaining > 0 || !enabled) {
     let inset = 3;
-    let h = enabled
+    let h = corpses.length
       ? (REVIVE_BUTTON.h - inset * 2) * remaining | 0
       : REVIVE_BUTTON.h - inset * 2;
     ctx.save();
@@ -281,6 +303,14 @@ function drawOrbs(
 function drawObjects() {
   for (let object of game.objects) {
     drawSceneSprite(object.sprite, object.x, object.y + object.hop);
+
+    if (object.is(CORPSE) && game.state === PLAYING) {
+      let canRevive = game.ability.timer >= game.ability.cooldown;
+      drawNineSlice(sprites.pink_frame, object.x - 2, -object.y - object.sprite[3] - 2, object.sprite[2] + 4, object.sprite[3] + 4);
+      if (canRevive) {
+        write("复", object.x - 1, -object.y - object.sprite[3] - 13);
+      }
+    }
 
     if (object.getBehaviour(Frozen)) {
       drawNineSlice(sprites.ice, object.x, -object.sprite[3], object.sprite[2], object.sprite[3]);

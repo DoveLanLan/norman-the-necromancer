@@ -260,6 +260,9 @@ export class Game {
   streak: number = 0;
   level: number = 0;
   dialogue: string[] = [];
+  notice = "";
+  noticeTimer = 0;
+  corpseHintShown = false;
 
   spell: Spell = {
     targetAngle: 0,
@@ -448,6 +451,22 @@ export class Game {
       if (recursive && ritual.recursive == false) continue;
       ritual.onCast?.(spell);
     }
+  }
+
+  showNotice(message: string, duration = 1500) {
+    this.notice = message;
+    this.noticeTimer = duration;
+  }
+
+  updateNotice(dt: number) {
+    if (this.noticeTimer > 0) {
+      this.noticeTimer = Math.max(0, this.noticeTimer - dt);
+    }
+  }
+
+  clearNotice() {
+    this.notice = "";
+    this.noticeTimer = 0;
   }
 
   getCastingPoint(): Point {

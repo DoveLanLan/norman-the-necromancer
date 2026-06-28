@@ -7,6 +7,28 @@ import { screenshake } from "./renderer";
 import type { Damage as Dmg } from "./game";
 import { distance, vectorToAngle, angleBetweenPoints, vectorFromAngle, clamp, randomInt } from "./helpers";
 import { LightningSpell } from "./objects";
+import { PLAYER, UNDEAD } from "./tags";
+
+export class ArrowShot extends Behaviour {
+  sprite = sprites.status_enraged;
+
+  override turns = 4;
+
+  onUpdate() {
+    let arrow = LightningSpell();
+    arrow.sprite = sprites.yellow_orb;
+    arrow.emitter!.frequency = 0.2;
+    arrow.x = this.object.x - arrow.sprite[2] - 2;
+    arrow.y = this.object.y + this.object.sprite[3] / 2;
+    arrow.vx = -130;
+    arrow.vy = 0;
+    arrow.mass = 0;
+    arrow.friction = 0;
+    arrow.collisionMask = UNDEAD | PLAYER;
+    arrow.addBehaviour(new DespawnTimer(arrow, 2500));
+    game.spawn(arrow);
+  }
+}
 
 export class Attack extends Behaviour {
   
@@ -154,7 +176,7 @@ export class Summon extends Behaviour {
     super(object);
   }
 
-  onSummon(object: GameObject) {}
+  onSummon(_object: GameObject) {}
 
   onFrame(dt: number): void {
     if ((this.summonTimer += dt) > this.summonSpeed) {

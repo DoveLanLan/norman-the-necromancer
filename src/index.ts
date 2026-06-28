@@ -10,9 +10,10 @@ import { Studious, Bleed, Bouncing, Tearstone, Ceiling, Drunkard, Salvage, Chill
 import { buy, enterShop, selectShopIndex, shop } from "./shop";
 import { dust } from "./fx";
 import { BPM, play, setMuted, toggleMute } from "./sounds";
-import { March } from "./behaviours";
+import { HitStreak, March } from "./behaviours";
 import { platform, PointerInput } from "./platform";
 import { getSaveState, recordMuted, recordProgress } from "./storage";
+import { CORPSE } from "./tags";
 import { contains, MUTE_HIT_AREA, RESTART_HIT_AREA, REVIVE_HIT_AREA, shopIndexAt } from "./ui";
 
 let player: ReturnType<typeof Player> = undefined!;
@@ -33,8 +34,8 @@ const INTRO_DIALOGUE = [
   "有时候，他们甚至真的成功了 (@)",
   "但像样的死灵法师...",
   "总能把自己再召回来。",
-  "拖动瞄准，点击施法。",
-  "右下角骷髅图标可以复活最近的尸骨。",
+  "按住拖动调整轨迹，松手施法。",
+  "有尸骨时，点右下角骷髅图标复活。",
 ];
 
 const OUTRO_DIALOGUE = [
@@ -125,6 +126,7 @@ function handleKey(key: number) {
 
 function update(dt: number) {
   updateDialogue(dt);
+  game.updateNotice(dt);
   render(dt);
   if (paused) return;
 
@@ -132,6 +134,7 @@ function update(dt: number) {
     updateLevel(dt);
     recordProgress(game.level + 1);
     game.update(dt);
+    updateResurrectionHint();
   }
 
   updateTweens(dt);
@@ -155,6 +158,14 @@ function update(dt: number) {
   }
 }
 
+function updateResurrectionHint() {
+  if (game.corpseHintShown || game.state !== PLAYING) return;
+  if (game.objects.some(object => object.is(CORPSE))) {
+    game.corpseHintShown = true;
+    game.showNotice("有尸骨！点右下角复活", 2600);
+  }
+}
+
 function onWin() {
   game.state = WIN;
   recordProgress(10, true);
@@ -167,7 +178,7 @@ function advanceDialogue() {
 
   // If the player watched the whole dialogue, remind them what to do next.
   if (game.state === INTRO && game.dialogue.length === 0) {
-    game.dialogue.push("拖动瞄准，点击开始");
+    game.dialogue.push("拖动瞄准，松手开始");
   } else if (game.state === WIN && game.dialogue.length === 0) {
     game.dialogue.push(RESTART_PROMPT);
   }
@@ -212,6 +223,7 @@ function createGame() {
   dialogueTimer = 0;
   normanIsBouncing = false;
   paused = false;
+  HitStreak.counters = {};
 
   player = Player();
   player.sprite = sprites.skull;

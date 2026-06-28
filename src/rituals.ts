@@ -12,10 +12,7 @@ import { shop } from "./shop";
 const NONE = 0;
 const BOUNCING = 1 << 0;
 const SPLITTING = 1 << 1;
-const EXPLOSIVE = 1 << 2;
 const HOMING = 1 << 3;
-const WARDSTONES = 1 << 4;
-const CASTING_RATE = 1 << 5;
 const CURSE = 1 << 6;
 
 export let Streak: Ritual = {
@@ -28,7 +25,7 @@ export let Streak: Ritual = {
 export let Bouncing: Ritual = {
   tags: BOUNCING,
   name: "弹射",
-  description: "法术会反弹",
+  description: "法术会反弹，适合打多段伤害",
   onActive() {
     game.spell.projectileBounce = 0.5;
     game.spell.projectileDespawnOnBounce = false;
@@ -45,7 +42,7 @@ export let Doubleshot: Ritual = {
   exclusiveTags: SPLITTING,
   rarity: RARE,
   name: "双发",
-  description: "一次发射 2 枚法术",
+  description: "一次发射 2 枚法术，覆盖更宽",
   onActive() {
     game.spell.shotsPerRound = 2;
   },
@@ -55,7 +52,7 @@ export let Hunter: Ritual = {
   tags: HOMING,
   rarity: RARE,
   name: "追猎",
-  description: "法术会追踪敌人",
+  description: "法术会追踪最近敌人",
   onCast(projectile) {
     projectile.addBehaviour(new Seeking(projectile));
   },
@@ -64,7 +61,7 @@ export let Hunter: Ritual = {
 export let Weightless: Ritual = {
   tags: NONE,
   name: "失重",
-  description: "法术不受重力影响",
+  description: "无重力法术，更适合直线射击",
   onActive() {
     game.spell.projectileMass = 0;
     game.spell.projectileFriction = 0;
@@ -100,7 +97,7 @@ class KnockbackSpell extends Behaviour {
 export let Knockback: Ritual = {
   tags: NONE,
   name: "击退",
-  description: "命中会击退敌人",
+  description: "命中会击退敌人，争取距离",
   onCast(spell) {
     spell.addBehaviour(new KnockbackSpell(spell));
   },
@@ -144,7 +141,7 @@ export let Rain: Ritual = {
   exclusiveTags: SPLITTING,
   rarity: RARE,
   name: "魂雨",
-  description: "法术下落时分裂",
+  description: "法术下落时分裂，适合弹射流",
   recursive: false,
   onCast(spell) {
     spell.addBehaviour(new RainSpell(spell));
@@ -154,7 +151,7 @@ export let Rain: Ritual = {
 export let Drunkard: Ritual = {
   tags: NONE,
   name: "醉术",
-  description: "伤害翻倍，但准星晃动",
+  description: "伤害翻倍，但准星会晃动",
   onCast(spell) {
     spell.vx += randomInt(100) - 50;
     spell.vy += randomInt(100) - 50;
@@ -174,7 +171,7 @@ export let Seer: Ritual = {
 export let Tearstone: Ritual = {
   tags: NONE,
   name: "泪石",
-  description: "半血以下伤害更高",
+  description: "半血以下法术伤害 x3",
   onCast(spell) {
     if (game.player.hp < game.player.maxHp / 2) {
       spell.getBehaviour(Damaging)!.amount *= 3;
@@ -185,7 +182,7 @@ export let Tearstone: Ritual = {
 export let Impatience: Ritual = {
   tags: NONE,
   name: "急性子",
-  description: "复活冷却加快",
+  description: "复活冷却减半",
   onActive() {
     game.ability.cooldown /= 2;
   }
@@ -203,7 +200,7 @@ export let GatherBones: Ritual = {
 export let Bleed: Ritual = {
   tags: CURSE,
   name: "放血",
-  description: "命中附加流血",
+  description: "命中附加流血，持续伤害",
   onCast(spell: GameObject) {
     spell.sprite = sprites.p_red_skull;
     spell.emitter!.extend({
@@ -226,7 +223,7 @@ export let Bleed: Ritual = {
 export let Allegiance: Ritual = {
   tags: NONE,
   name: "效忠",
-  description: "复活时召唤护卫",
+  description: "复活时额外召唤 3 名护卫",
   onResurrect() {
     for (let i = 0; i < 3; i++) {
       let unit = SkeletonLord();
@@ -239,7 +236,7 @@ export let Allegiance: Ritual = {
 export let Salvage: Ritual = {
   tags: NONE,
   name: "回收",
-  description: "关底尸骨变成魂",
+  description: "关底尸骨每具变成 5 魂",
   onLevelEnd() {
     let corpses = game.objects.filter(object => object.is(CORPSE));
 
@@ -273,7 +270,7 @@ export let Electrodynamics: Ritual = {
   tags: NONE,
   rarity: RARE,
   name: "电魂",
-  description: "命中后召唤闪电",
+  description: "命中后召唤闪电，连锁压制",
   onCast(spell) {
     spell.addBehaviour(new LightningStrike(spell));
   },
@@ -282,9 +279,12 @@ export let Electrodynamics: Ritual = {
 export let Chilly: Ritual = {
   tags: NONE,
   name: "寒意",
-  description: "小概率冻结敌人",
-  onCast(spell) {
-    if (randomFloat() <= 0.1) {
+  description: "每第 5 发冻结敌人",
+  onActive() {
+    let casts = 0;
+    this.onCast = spell => {
+      if (++casts % 5 !== 0) return;
+
       spell.emitter!.variants = [[sprites.p_ice_1, sprites.p_ice_2, sprites.p_ice_3]];
       spell.sprite = sprites.p_skull;
       spell.getBehaviour(Damaging)!.amount = 0;
@@ -296,14 +296,14 @@ export let Chilly: Ritual = {
           target.addBehaviour(new Frozen(target), 0);
         }
       };
-    }
+    };
   },
 };
 
 export let Giants: Ritual = {
   tags: NONE,
   name: "巨骨",
-  description: "有概率复活巨骷髅",
+  description: "有 20% 概率复活巨骷髅",
   onResurrection(object) {
     if (randomFloat() < 0.2) {
       game.despawn(object);

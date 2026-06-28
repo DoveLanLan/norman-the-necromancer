@@ -60,7 +60,10 @@ export function resetActions() {
 export function Cast() {
   let { spell, player } = game;
 
-  if (spell.casts === 0) return;
+  if (spell.casts === 0) {
+    game.showNotice("法术充能中", 900);
+    return;
+  }
   spell.casts--;
 
   player.sprite = sprites.norman_arms_up;
@@ -88,6 +91,7 @@ export function Cast() {
 
 export function Resurrect() {
   if (game.ability.timer < game.ability.cooldown) {
+    game.showNotice("复活冷却中", 900);
     return;
   }
 
@@ -98,10 +102,12 @@ export function Resurrect() {
     .slice(0, game.ability.resurrectionCount);
 
   if (!corpses.length) {
+    game.showNotice("没有可复活的尸骨", 900);
     return;
   }
 
   game.ability.timer = 0;
+  game.showNotice(`复活 ${corpses.length} 具尸骨`, 1100);
 
   for (let ritual of game.rituals) {
     ritual.onResurrect?.();

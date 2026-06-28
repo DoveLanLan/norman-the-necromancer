@@ -3,8 +3,8 @@ import * as fx from "./fx";
 import * as sfx from "./sounds";
 import { Behaviour, GameObject } from "./game";
 import { CORPSE, LIVING, SPELL, MOBILE, PLAYER, UNDEAD } from "./tags";
-import { DEG_180, DEG_90, randomElement, randomFloat, randomInt } from "./helpers";
-import { March, Attack, Damaging, Bleeding, Enraged, Summon, Invulnerable, DespawnTimer } from "./behaviours";
+import { DEG_180, DEG_90, randomElement, randomInt } from "./helpers";
+import { March, Attack, Damaging, Bleeding, Enraged, Summon, Invulnerable, DespawnTimer, ArrowShot } from "./behaviours";
 import { Damage, Die } from "./actions";
 
 export function Corpse() {
@@ -120,8 +120,10 @@ export function Villager() {
 
 export function Bandit() {
   let unit = Villager();
+  unit.sprite = sprites.villager_3;
   unit.hp = unit.maxHp = 2;
   unit.souls = 8;
+  unit.addBehaviour().sprite = sprites.status_enraged;
   return unit;
 }
 
@@ -154,12 +156,14 @@ export function TheKing() {
 
     if (phase === 1 && willDie) {
       phase = 2;
+      game.showNotice("国王召集卫兵，先清场！", 2200);
       unit.addBehaviour(summons);
       unit.addBehaviour(enraged);
       unit.addBehaviour(invulnerable);
       marching.step *= -1;
     } else if (phase === 3 && willDie) {
       sfx.synths.kick.enter();
+      game.showNotice("国王坠落！复活尸骨反击", 2200);
       phase = 4;
       unit.hp = unit.maxHp;
       unit.sprite = sprites.the_king_on_foot;
@@ -177,6 +181,7 @@ export function TheKing() {
 
   summons.onSummon = () => {
     if (summons.summonCounter >= 5) {
+      game.showNotice("卫兵已清，继续攻击国王！", 1800);
       phase = 3;
       unit.removeBehaviour(enraged);
       unit.removeBehaviour(invulnerable);
@@ -256,6 +261,7 @@ export function Archer() {
   unit.updateSpeed = 750;
   unit.hp = unit.maxHp = 2;
   unit.souls = 8;
+  unit.addBehaviour(new ArrowShot(unit));
   return unit;
 }
 

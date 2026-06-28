@@ -22,7 +22,11 @@ for (let k in glyphWidthOverrides) {
 }
 
 let spritesImage = platform.createImage();
+let spritesReady = false;
+spritesImage.onload = () => spritesReady = true;
+spritesImage.onerror = () => spritesReady = true;
 spritesImage.src = spriteSrc;
+if (spritesImage.complete) spritesReady = true;
 
 export let canvas = platform.canvas;
 export let ctx = platform.ctx;
@@ -173,13 +177,25 @@ export function init(width: number, height: number, update: (dt: number) => void
   resize();
   platform.onResize(resize);
 
-  let t0 = 0;
+  let t0 = platform.now();
+  let hidden = false;
   (function loop(t1 = 0) {
     platform.requestFrame(loop);
-    update(t1 - t0);
-    t0 = t1;
+    if (hidden || !spritesReady) return;
+
+    let now = t1 > 0 ? t1 : platform.now();
+    let dt = clamp(now - t0, 0, 100);
+    update(dt);
+    t0 = now;
   })();
-  platform.onFocus(() => t0 = platform.now());
+  platform.onFocus(() => {
+    hidden = false;
+    t0 = platform.now();
+  });
+  platform.onHide(() => {
+    hidden = true;
+    t0 = platform.now();
+  });
 }
 
 export function screenToCanvasCoords(x: number, y: number) {

@@ -22,6 +22,9 @@ export interface DisplayMetrics {
 
 interface PlatformImage {
   src: string;
+  complete?: boolean;
+  onload?: ((...args: any[]) => void) | null;
+  onerror?: ((...args: any[]) => void) | null;
 }
 
 interface Platform {
@@ -39,6 +42,7 @@ interface Platform {
   onResize(handler: () => void): void;
   onFocus(handler: () => void): void;
   requestFrame(callback: FrameRequestCallback): number;
+  onHide(handler: () => void): void;
   now(): number;
   getStorage(key: string): string | undefined;
   setStorage(key: string, value: string): void;
@@ -65,8 +69,6 @@ function createBrowserPlatform(): Platform {
   canvas.style.imageRendering = "pixelated";
 
   const ctx = canvas.getContext("2d")!;
-  let logicalWidth = 400;
-  let logicalHeight = 200;
   let metrics: DisplayMetrics = {
     scale: 1,
     offsetX: 0,
@@ -100,14 +102,12 @@ function createBrowserPlatform(): Platform {
       const AudioCtor = window.AudioContext || (window as any).webkitAudioContext;
       return AudioCtor ? new AudioCtor() : undefined;
     },
-    clear(width, height) {
+    clear() {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas!.width, canvas!.height);
       useGameTransform();
     },
     resize(width, height) {
-      logicalWidth = width;
-      logicalHeight = height;
       const scale = Math.min(innerWidth / width, innerHeight / height, 3);
       const pixelRatio = devicePixelRatio || 1;
       const cssWidth = width * scale;
@@ -140,13 +140,16 @@ function createBrowserPlatform(): Platform {
       });
     },
     onKeyDown(handler) {
-      window.addEventListener("keydown", event => handler(event.which || event.keyCode));
+      window.addEventListener("keydown", event => handler(event.key === " " ? 32 : event.key === "Enter" ? 13 : event.key === "ArrowUp" ? 38 : event.key === "ArrowDown" ? 40 : event.key === "p" || event.key === "P" ? 80 : 0));
     },
     onResize(handler) {
       window.addEventListener("resize", handler);
     },
     onFocus(handler) {
       window.addEventListener("focus", handler);
+    },
+    onHide(handler) {
+      window.addEventListener("blur", handler);
     },
     requestFrame: callback => requestAnimationFrame(callback),
     now: () => performance.now(),
@@ -197,7 +200,7 @@ function createWechatPlatform(wxApi: typeof wx): Platform {
     };
   }
 
-  function useGameTransform(width: number, height: number) {
+  function useGameTransform() {
     const dpr = metrics.pixelRatio;
     ctx.setTransform(
       dpr * metrics.scale,
@@ -236,11 +239,11 @@ function createWechatPlatform(wxApi: typeof wx): Platform {
         return undefined;
       }
     },
-    clear(width, height) {
+    clear() {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.fillStyle = BACKGROUND;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      useGameTransform(width, height);
+      useGameTransform();
     },
     resize(width, height) {
       const info = getWindowInfo();
@@ -264,7 +267,7 @@ function createWechatPlatform(wxApi: typeof wx): Platform {
 
       canvas.width = Math.max(1, Math.round(windowWidth * pixelRatio));
       canvas.height = Math.max(1, Math.round(windowHeight * pixelRatio));
-      useGameTransform(width, height);
+      useGameTransform();
       return metrics;
     },
     screenToLogical(x, y) {
@@ -292,6 +295,9 @@ function createWechatPlatform(wxApi: typeof wx): Platform {
     },
     onFocus(handler) {
       wxApi.onShow?.(handler);
+    },
+    onHide(handler) {
+      wxApi.onHide?.(handler);
     },
     requestFrame(callback) {
       const raf = wxApi.requestAnimationFrame || (globalThis as any).requestAnimationFrame;

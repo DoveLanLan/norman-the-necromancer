@@ -18,12 +18,17 @@ export let shop: Shop = {
 
 export function buy() {
   let item = shop.items[shop.selectedIndex];
-  if (item && item.cost <= game.souls) {
-    game.souls -= item.cost;
-    removeFromArray(shop.items, item);
-    item.purchase();
-    selectShopIndex(shop.selectedIndex);
+  if (!item) return;
+
+  if (item.cost > game.souls) {
+    game.showNotice("魂不足", 900);
+    return;
   }
+
+  game.souls -= item.cost;
+  removeFromArray(shop.items, item);
+  item.purchase();
+  selectShopIndex(shop.selectedIndex);
 }
 
 export function selectShopIndex(step: number) {
@@ -74,7 +79,9 @@ export function createRitualItems(): ShopItem[] {
     return {
       name: ritual.name,
       description: ritual.description,
-      cost: ritual.rarity === RARE ? 200 + randomInt(100) : 75 + randomInt(100),
+      cost: ritual.rarity === RARE
+        ? 200 + randomInt(100)
+        : Math.min(75 + randomInt(100), 45 + game.level * 25),
       purchase() {
         removeFromArray(shop.rituals, ritual);
         game.addRitual(ritual);
