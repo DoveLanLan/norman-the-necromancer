@@ -130,7 +130,7 @@ function drawHud() {
   if (game.state === PLAYING) {
     let progress = clamp(game.ability.timer / game.ability.cooldown, 0, 1);
     let corpses = getCorpses();
-    drawReviveButton(progress, corpses);
+    drawReviveButton(progress, corpses.slice(0, game.ability.resurrectionCount));
   }
 }
 

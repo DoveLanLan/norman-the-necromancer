@@ -36,7 +36,7 @@ export function Spell() {
   let object = new GameObject();
   object.sprite = sprites.p_green_skull;
   object.tags = SPELL;
-  object.collisionMask = MOBILE | LIVING;
+  object.collisionMask = LIVING;
   object.mass = 100;
   object.emitter = fx.trail();
   object.friction = 0.1;

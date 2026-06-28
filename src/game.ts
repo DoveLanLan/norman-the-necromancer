@@ -283,7 +283,7 @@ export class Game {
   ability: Ability = {
     cooldown: 10_000,
     timer: 10_000,
-    resurrectionCount: 1,
+    resurrectionCount: 3,
   };
 
   constructor(player: GameObject) {
