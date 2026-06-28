@@ -28,6 +28,9 @@ export function buy() {
   game.souls -= item.cost;
   removeFromArray(shop.items, item);
   item.purchase();
+  if (item.cost > 0) {
+    game.showNotice(`已购买：${item.name}`, 1000);
+  }
   selectShopIndex(shop.selectedIndex);
 }
 
@@ -48,6 +51,7 @@ export function exitShop() {
   game.ability.timer = game.ability.cooldown;
   game.state = PLAYING;
   nextLevel();
+  game.showLevelNotice?.();
   useLevelSynths();
 }
 
@@ -81,7 +85,7 @@ export function createRitualItems(): ShopItem[] {
       description: ritual.description,
       cost: ritual.rarity === RARE
         ? 200 + randomInt(100)
-        : Math.min(75 + randomInt(100), 45 + game.level * 25),
+        : Math.min(65 + randomInt(70), 35 + game.level * 25),
       purchase() {
         removeFromArray(shop.rituals, ritual);
         game.addRitual(ritual);

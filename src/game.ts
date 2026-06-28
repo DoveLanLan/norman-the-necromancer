@@ -263,6 +263,7 @@ export class Game {
   notice = "";
   noticeTimer = 0;
   corpseHintShown = false;
+  showLevelNotice?: () => void;
 
   spell: Spell = {
     targetAngle: 0,

@@ -45,6 +45,19 @@ const OUTRO_DIALOGUE = [
   "完",
 ];
 
+const LEVEL_NOTICES = [
+  "复活尸骨，组建你的骷髅军团",
+  "弓箭手会远程射击，优先解决",
+  "僧侣会治疗敌人，别让他们拖住战局",
+  "盾兵会格挡法术，找准时机攻击",
+  "吹笛人会召唤老鼠，迅速集火",
+  "狂暴骑士会免疫法术，等怒气消退",
+  "人群压境，多用复活挡线",
+  "传送门会持续召唤敌人，尽快摧毁",
+  "皇家卫兵会反弹法术，别硬打盾牌",
+  "国王来了，留好尸骨反击",
+];
+
 const RESTART_PROMPT = "点击重新开始";
 
 function aimAt({ x, y }: PointerInput) {
@@ -53,10 +66,16 @@ function aimAt({ x, y }: PointerInput) {
   game.spell.targetAngle = angleBetweenPoints(p1, p2);
 }
 
+function showLevelNotice() {
+  let notice = LEVEL_NOTICES[game.level];
+  if (notice) game.showNotice(notice, 2400);
+}
+
 function startPlaying() {
   play();
   game.state = PLAYING;
   game.player.sprite = sprites.norman_arms_down;
+  showLevelNotice();
 }
 
 function handlePointerUp(point: PointerInput) {
@@ -228,6 +247,7 @@ function createGame() {
   player = Player();
   player.sprite = sprites.skull;
   game = new Game(player);
+  game.showLevelNotice = showLevelNotice;
   game.addRitual(Streak);
   game.dialogue = INTRO_DIALOGUE.slice();
   shop.rituals = createRitualPool();
